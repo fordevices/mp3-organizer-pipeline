@@ -12,7 +12,7 @@
 | Project scaffold + DB layer | ✅ Complete | Session 1 — 2026-03-21 |
 | ShazamIO identification | ✅ Complete | Session 2 — 2026-03-21 |
 | Manual review CLI | ✅ Complete | Session 3 — 2026-03-21 |
-| Mutagen ID3 tagger | ⬜ Not started | Session 4 |
+| Mutagen ID3 tagger | ✅ Complete | Session 4 — 2026-03-21 |
 | File organizer | ⬜ Not started | Session 5 |
 | Orchestrator + run logging | ⬜ Not started | Session 6 |
 | End-to-end test + polish | ⬜ Not started | Session 7 |
@@ -242,6 +242,80 @@ Observed on 22 files (10 Tamil, 7 Hindi, 4 English + 1 no-match English) on 2026
 - Flag any `shazam_year` that is a number **< 1940** or **> current calendar year**
 - The `1905` case above is the canonical example of a corrupt Shazam DB entry
 - Years stored as `""` (missing) do **not** trigger the warning — missing is different from wrong
+
+---
+
+## Mutagen ID3 tagging reference
+
+Used by `pipeline/tagger.py` (Stage 3). All patterns verified against mutagen 1.47.
+
+### Field priority rule
+
+For every tag field, resolution order is:
+
+```
+final_*  (non-empty after strip)  →  use it          [final_*]
+shazam_* (non-empty after strip)  →  use it          [shazam_*]
+otherwise                         →  empty string    [empty]
+```
+
+`final_*` fields are set either by Stage 1 (seeded from Shazam at identify time) or
+overwritten by Stage 2 (manual review). A `final_*` value is always preferred because
+it reflects any human correction that has been made.
+
+Never write an empty string into an ID3 text frame — omit the tag entirely if the
+resolved value is empty.
+
+### ID3 frame mapping
+
+| Field | ID3 frame | Mutagen class | Notes |
+|---|---|---|---|
+| Title | `TIT2` | `mutagen.id3.TIT2(encoding=3, text=title)` | encoding=3 → UTF-8 |
+| Artist | `TPE1` | `mutagen.id3.TPE1(encoding=3, text=artist)` | |
+| Album | `TALB` | `mutagen.id3.TALB(encoding=3, text=album)` | Omit if empty |
+| Year | `TDRC` | `mutagen.id3.TDRC(encoding=3, text=year)` | Omit if empty |
+| Genre | `TCON` | `mutagen.id3.TCON(encoding=3, text=genre)` | Omit if empty |
+| Pipeline ID | `TXXX:PIPELINE_ID` | `mutagen.id3.TXXX(encoding=3, desc="PIPELINE_ID", text=song_id)` | Always written — survives file moves |
+| Cover art | `APIC` | `mutagen.id3.APIC(encoding=3, mime="image/jpeg", type=3, desc="Cover", data=<bytes>)` | type=3 → front cover |
+
+### Opening and saving
+
+```python
+from mutagen.id3 import ID3, ID3NoHeaderError
+
+try:
+    tags = ID3(file_path)
+except ID3NoHeaderError:
+    tags = ID3()          # create fresh tag object — no header in file yet
+
+# ... set frames ...
+
+tags.save(file_path)      # writes or creates the ID3 header in the file
+```
+
+### Cover art download
+
+```python
+import requests
+resp = requests.get(cover_url, timeout=10)
+resp.raise_for_status()
+image_bytes = resp.content
+```
+
+- Timeout is **10 seconds** — enforced strictly.
+- Download failure is **non-fatal**: log the error, skip the APIC frame, continue tagging.
+- Always use `shazam_cover_url` (the 400×400 `coverart` field) — never `coverarthq`.
+
+### Real-world findings — Session 3
+
+Observed after Stage 2 review on 2026-03-21. Affects field resolution in tagger:
+
+| Song | Situation | Expected tagger behaviour |
+|---|---|---|
+| `max-000002` KoRn-Evolution | All four final_* fields set by manual override | All fields tagged as `[final_*]` |
+| `max-000015` Maharajanodu | `final_year="1995"` (corrected); shazam title/artist intact | Year from `[final_*]`, rest from `[shazam_*]` |
+| `max-000001` Fight the Power | `shazam_album=""`, `shazam_year=""` | Album and year frames **omitted** (`[empty]`) |
+| `max-000013` Mounamaananeram | `shazam_album=""`, `shazam_year=""` (Shazam has no metadata) | Album and year frames omitted |
 
 ---
 

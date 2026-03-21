@@ -29,6 +29,11 @@ def cmd_stage1(source: str):
     print("Summary:", summary)
 
 
+def cmd_stage3(dry_run: bool):
+    from pipeline.tagger import run_tagging
+    run_tagging(dry_run=dry_run)
+
+
 def cmd_review(mode: str, limit: int):
     from pipeline.review import run_review
     run_review(mode=mode, limit=limit)
@@ -39,6 +44,7 @@ def main():
     parser.add_argument("source", nargs="?", help="File or folder to process")
     parser.add_argument("--check", action="store_true", help="Verify DB and exit")
     parser.add_argument("--stage", type=int, choices=[1, 2, 3, 4], help="Run a single stage")
+    parser.add_argument("--dry-run", action="store_true", help="Preview actions without writing")
     parser.add_argument("--review", action="store_true", help="Interactive review of unmatched files")
     parser.add_argument("--all", dest="review_all", action="store_true",
                         help="Review all identified + no_match songs")
@@ -60,6 +66,10 @@ def main():
         else:
             mode = "no_match"
         cmd_review(mode=mode, limit=args.limit)
+        return
+
+    if args.stage == 3:
+        cmd_stage3(dry_run=args.dry_run)
         return
 
     if not args.source:
