@@ -34,6 +34,11 @@ def cmd_stage3(dry_run: bool):
     run_tagging(dry_run=dry_run)
 
 
+def cmd_stage4(dry_run: bool):
+    from pipeline.organizer import run_organization
+    run_organization(dry_run=dry_run)
+
+
 def cmd_review(mode: str, limit: int):
     from pipeline.review import run_review
     run_review(mode=mode, limit=limit)
@@ -70,6 +75,10 @@ def main():
 
     if args.stage == 3:
         cmd_stage3(dry_run=args.dry_run)
+        return
+
+    if args.stage == 4:
+        cmd_stage4(dry_run=args.dry_run)
         return
 
     if not args.source:

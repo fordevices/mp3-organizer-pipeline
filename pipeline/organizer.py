@@ -1,0 +1,147 @@
+"""
+Stage 4 — File organizer.
+Path pattern and sanitize rules follow the README "File organization reference" section.
+"""
+
+import os
+import re
+import shutil
+
+from pipeline import config
+from pipeline.db import get_songs_by_status, update_song
+from pipeline.tagger import resolve
+
+# ---------------------------------------------------------------------------
+# Sanitize (README: File organization reference)
+# ---------------------------------------------------------------------------
+
+_ILLEGAL = r'[/\\:*?"<>|]'
+
+
+def sanitize(name: str) -> str:
+    """
+    Replace illegal filename characters with '_', collapse multiple underscores,
+    strip leading/trailing whitespace and dots. Return 'Unknown' if empty.
+    Legal: parentheses, brackets, &, -, ,, !, and all Unicode.
+    """
+    name = re.sub(_ILLEGAL, '_', name)
+    name = re.sub(r'_+', '_', name)
+    name = name.strip(' .')
+    return name or 'Unknown'
+
+
+# ---------------------------------------------------------------------------
+# Path construction
+# ---------------------------------------------------------------------------
+
+def build_target_path(song: dict) -> str:
+    """
+    Construct the destination path for a tagged song.
+    Pattern: Music/<Language>/<Year>/<Album>/<Title>.mp3
+    All components pass through sanitize(). Returns absolute path.
+    """
+    language = song.get("language") or "Other"
+    year     = resolve(song.get("final_year"),   song.get("shazam_year"),  "Unknown Year")
+    album    = resolve(song.get("final_album"),   song.get("shazam_album"), "Unknown Album")
+    title    = resolve(song.get("final_title"),   song.get("shazam_title"), song.get("song_id", "Unknown"))
+
+    path = os.path.join(
+        config.OUTPUT_DIR,
+        sanitize(language),
+        sanitize(year),
+        sanitize(album),
+        sanitize(title) + ".mp3",
+    )
+    return os.path.abspath(path)
+
+
+# ---------------------------------------------------------------------------
+# Single-file organizer
+# ---------------------------------------------------------------------------
+
+def organize_file(song: dict, dry_run: bool = False) -> bool:
+    """
+    Move one tagged song to its target path.
+    Returns True on success (or dry_run), False on error.
+    """
+    song_id = song["song_id"]
+    source  = song["file_path"]
+    target  = build_target_path(song)
+
+    # Already in place
+    if os.path.abspath(source) == target:
+        update_song(song_id, status="done", final_path=target)
+        return True
+
+    if dry_run:
+        rel = os.path.relpath(target)
+        print(f"[{song_id}] would move → {rel}")
+        return True
+
+    try:
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+
+        # Collision: append (song_id) to stem
+        if os.path.exists(target):
+            title = resolve(song.get("final_title"), song.get("shazam_title"), song_id)
+            stem  = sanitize(f"{title} ({song_id})")
+            target = os.path.join(os.path.dirname(target), stem + ".mp3")
+            if os.path.exists(target):
+                update_song(song_id, status="error",
+                            error_msg="collision unresolvable")
+                return False
+
+        shutil.move(source, target)
+        update_song(song_id, status="done", final_path=os.path.abspath(target))
+        return True
+
+    except Exception as e:
+        update_song(song_id, status="error", error_msg=str(e))
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Batch runner
+# ---------------------------------------------------------------------------
+
+def run_organization(dry_run: bool = False) -> dict:
+    """
+    Organize all songs with status="tagged".
+    Returns {moved, errors}.
+    """
+    songs = get_songs_by_status("tagged")
+    moved = errors = 0
+
+    if not songs:
+        print("No tagged songs to organize.")
+        return {"moved": 0, "errors": 0}
+
+    if dry_run:
+        print(f"DRY RUN — would organize {len(songs)} song(s):\n")
+
+    for song in songs:
+        song_id = song["song_id"]
+        ok = organize_file(song, dry_run=dry_run)
+
+        if dry_run:
+            moved += 1  # dry-run always counts as success
+            continue
+
+        if ok:
+            moved += 1
+            rel = os.path.relpath(song.get("final_path") or build_target_path(song))
+            title  = resolve(song.get("final_title"),  song.get("shazam_title"),  "")
+            artist = resolve(song.get("final_artist"), song.get("shazam_artist"), "")
+            print(f"[{song_id}] ✓ moved   → {rel}")
+        else:
+            errors += 1
+            err = song.get("error_msg", "unknown error")
+            print(f"[{song_id}] ✗ error   → {err}")
+
+    print()
+    if dry_run:
+        print(f"Dry run complete — {moved} song(s) previewed, nothing moved.")
+    else:
+        print(f"Organization complete — {moved} moved, {errors} errors.")
+
+    return {"moved": moved, "errors": errors}

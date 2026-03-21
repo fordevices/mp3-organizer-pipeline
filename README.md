@@ -13,7 +13,7 @@
 | ShazamIO identification | ✅ Complete | Session 2 — 2026-03-21 |
 | Manual review CLI | ✅ Complete | Session 3 — 2026-03-21 |
 | Mutagen ID3 tagger | ✅ Complete | Session 4 — 2026-03-21 |
-| File organizer | ⬜ Not started | Session 5 |
+| File organizer | ✅ Complete | Session 5 — 2026-03-21 |
 | Orchestrator + run logging | ⬜ Not started | Session 6 |
 | End-to-end test + polish | ⬜ Not started | Session 7 |
 
@@ -316,6 +316,81 @@ Observed after Stage 2 review on 2026-03-21. Affects field resolution in tagger:
 | `max-000015` Maharajanodu | `final_year="1995"` (corrected); shazam title/artist intact | Year from `[final_*]`, rest from `[shazam_*]` |
 | `max-000001` Fight the Power | `shazam_album=""`, `shazam_year=""` | Album and year frames **omitted** (`[empty]`) |
 | `max-000013` Mounamaananeram | `shazam_album=""`, `shazam_year=""` (Shazam has no metadata) | Album and year frames omitted |
+
+---
+
+## File organization reference
+
+Used by `pipeline/organizer.py` (Stage 4). Verified against real song data from Sessions 2–4.
+
+### Output path pattern
+
+```
+Music/<Language>/<Year>/<Album>/<Title>.mp3
+```
+
+All four path components pass through `sanitize()` before being joined.
+
+### Field resolution order
+
+Same priority rule as the tagger — `final_*` wins, then `shazam_*`, then fallback:
+
+| Component | Source fields | Fallback if both empty |
+|---|---|---|
+| Language | `song["language"]` | `"Other"` |
+| Year | `final_year` → `shazam_year` | `"Unknown Year"` |
+| Album | `final_album` → `shazam_album` | `"Unknown Album"` |
+| Title | `final_title` → `shazam_title` | `song["song_id"]` |
+
+### `sanitize()` rules
+
+Replaces **illegal filename characters** (`/ \ : * ? " < > |`) with `_`.
+Then collapses multiple consecutive underscores to one. Then strips leading/trailing
+whitespace and dots. Returns `"Unknown"` if the result is empty.
+
+**Legal and preserved:** parentheses `()`, square brackets `[]`, ampersands `&`,
+hyphens `-`, commas `,`, exclamation marks `!`, and all Unicode (Tamil script etc.).
+
+```python
+import re
+ILLEGAL = r'[/\\:*?"<>|]'
+
+def sanitize(name: str) -> str:
+    name = re.sub(ILLEGAL, '_', name)
+    name = re.sub(r'_+', '_', name)
+    name = name.strip(' .')
+    return name or 'Unknown'
+```
+
+### Real-cases table
+
+Derived from the 20 tagged songs on 2026-03-21. These are the four edge-case
+verification targets for Session 5 Pass 1:
+
+| Song | Edge case | Expected output path |
+|---|---|---|
+| `max-000001` Fight the Power | `final_album=""`, `final_year=""` — both empty | `Music/English/Unknown Year/Unknown Album/Fight the Power.mp3` |
+| `max-000002` Evolution | Full manual override, no cover URL | `Music/English/1999/Issues/Evolution.mp3` |
+| `max-000015` Maharajanodu | Partial override: only year corrected (1905→1995) | `Music/Tamil/1995/Sathi Leelavathi (Original Motion Picture Soundtrack) - EP/Maharajanodu.mp3` |
+| `max-000007` Chura Liya... | Title contains `"` (illegal) → replaced with `_` | `Music/Hindi/1973/Singing Icon - Asha Bhosle/Chura Liya Hai Tumne Jo Dil Ko (From _Yaadon Ki Baaraat_).mp3` |
+
+Other notable sanitizations from the real dataset:
+
+| Input string | After sanitize() |
+|---|---|
+| `Word Up!: The Remixes - EP` | `Word Up!_ The Remixes - EP` (`:` → `_`) |
+| `Kabhi Kabhie (Original Motion Picture Soundtrack) [Dialogues Version]` | unchanged — `()` and `[]` are legal |
+| `Rettai Vaal Kuruvi (Original Motion Picture Soundtrack)` | unchanged |
+| `Guru - Ullaasapparavaigal - Sikappu Rojakkal` | unchanged — hyphens legal |
+| `Mounamaananeram` with empty album + year | `Music/Tamil/Unknown Year/Unknown Album/Mounamaananeram.mp3` |
+
+### Collision handling
+
+If `target` already exists on disk:
+1. Append `" (song_id)"` to the title stem before `.mp3`:
+   `Vaseegara (max-000042).mp3`
+2. Run the stem through `sanitize()` again.
+3. If that path also exists → mark `status="error"`, `error_msg="collision unresolvable"`.
 
 ---
 
