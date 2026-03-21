@@ -1,5 +1,9 @@
 # mp3-organizer-pipeline — User Guide
 
+> **New to this project?** Start with [What it does](../README.md).
+> **Want to understand how it works?** See [Architecture](ARCHITECTURE.md).
+> **Questions about MP3s and fingerprinting?** See [Music Files Primer](MUSIC_FILES_PRIMER.md).
+
 `mp3-organizer-pipeline` is a command-line tool that takes a folder of unknown, badly-named
 MP3 files and transforms them into a clean, fully tagged, and neatly organised music library.
 It is designed for anyone with a large collection of Tamil, Hindi, English, or other-language

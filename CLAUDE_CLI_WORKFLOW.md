@@ -1,4 +1,9 @@
 # Claude CLI — Project Onboarding Prompt
+
+> **This file is for Claude CLI sessions only.**
+> For the human PR workflow, see [CONTRIBUTING.md](CONTRIBUTING.md).
+> For project architecture, see [DOCS/ARCHITECTURE.md](DOCS/ARCHITECTURE.md).
+
 > Run this ONCE at the start of any new Claude CLI session before working on an issue.
 > It teaches Claude CLI what the project is, how it works, and what the rules are.
 > After running this, paste the issue prompt from CONTRIBUTING.md.
@@ -28,18 +33,40 @@ Key things to extract and state:
   - The verification requirement
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-STEP 2 — READ THE ARCHITECTURE
+STEP 2a — READ THE ARCHITECTURE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Read README.md in full.
+Read DOCS/ARCHITECTURE.md in full.
 
 Key things to extract and state:
   - The four pipeline stages and which module owns each one
+  - The module responsibility of each of the 7 pipeline files
+  - The output folder pattern: Music/<Language>/<Year>/<Album>/<Title>.mp3
+  - The full CLI flag surface
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2b — READ THE DATABASE REFERENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Read DOCS/DATABASE.md in full.
+
+Key things to extract and state:
   - The status flow: pending → identified → no_match → tagged → done → error
   - The field priority rule: final_* beats shazam_* beats fallback
-  - The output folder pattern: Music/<Language>/<Year>/<Album>/<Title>.mp3
   - The song ID format: max-XXXXXX
-  - The three review modes: no_match / all / flagged
+  - What triggers each status transition
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2c — SKIM DESIGN DECISIONS (unless issue touches Stage 1)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Read DOCS/DESIGN_DECISIONS.md (skim unless issue touches Stage 1 / identify.py).
+
+Key things to extract and state:
+  - Why ShazamIO was chosen (one sentence)
+  - The ShazamIO response parsing structure: subtitle is artist, sections.metadata
+    holds album/year — this is a common source of bugs
+  - The fallback plan if ShazamIO breaks
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 STEP 3 — READ THE LIVE CODE
@@ -90,7 +117,9 @@ STEP 5 — CONFIRM YOU ARE READY
 After completing steps 1–4, print this checklist with ✓ or ✗ for each item:
 
   [ ] CONTRIBUTING.md read — rules understood
-  [ ] README.md read — architecture understood
+  [ ] DOCS/ARCHITECTURE.md read — modules, stages, CLI surface understood
+  [ ] DOCS/DATABASE.md read — schema, status flow, field priority understood
+  [ ] DOCS/DESIGN_DECISIONS.md skimmed — ShazamIO parsing quirks noted
   [ ] All 7 pipeline modules read — functions and gotchas noted
   [ ] main.py read — full CLI surface known
   [ ] python3 main.py --check passed — DB is healthy
@@ -151,6 +180,7 @@ Every session has exactly two prompts:
 
 ```
 Prompt 1 (onboarding):   reads codebase, checks DB, confirms ready
+                         — key sources: DOCS/ARCHITECTURE.md + DOCS/DATABASE.md
 Prompt 2 (issue):        implements exactly one GitHub issue
 ```
 

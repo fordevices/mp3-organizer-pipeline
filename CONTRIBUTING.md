@@ -1,5 +1,8 @@
 # Contributing to mp3-organizer-pipeline
 
+> **First time here?** Read [README.md](README.md) first.
+> **Using Claude CLI to implement an issue?** See [CLAUDE_CLI_WORKFLOW.md](CLAUDE_CLI_WORKFLOW.md).
+
 This document covers two things:
 1. The GitHub workflow for humans raising bugs and features
 2. The Claude CLI workflow for implementing them — how to use Claude CLI
@@ -56,6 +59,7 @@ Who benefits and how.
 
 **What module would this touch?**
 identify.py / review.py / tagger.py / organizer.py / runner.py / main.py / db.py
+— see DOCS/ARCHITECTURE.md for module responsibilities
 
 **Acceptance criteria**
 A bullet list of specific, testable things that must be true for this to be done.
@@ -80,11 +84,14 @@ to implement a GitHub issue. Read this entire file before starting any session.
 
 Every session starts with Claude CLI reading:
 1. This file (CONTRIBUTING.md)
-2. README.md
-3. The specific module(s) the issue touches
-4. The current DB schema (via --check or db.py directly)
+2. DOCS/ARCHITECTURE.md  — pipeline stages, modules, status flow, CLI surface
+3. DOCS/DATABASE.md      — full schema, field priority rule, status meanings
+4. (if issue touches identification) DOCS/DESIGN_DECISIONS.md — ShazamIO
+   response structure, API trade-offs, fallback plan
+5. README.md             — quick orientation only, not architecture
+6. The specific module(s) the issue touches
 
-Only after reading all four does it write any code.
+Only after reading all of the above does it write any code.
 
 ### What Claude CLI must never do
 
@@ -182,10 +189,12 @@ and paste into Claude CLI from the project root directory.
 You are implementing a GitHub issue for the mp3-organizer-pipeline project.
 
 Before writing any code, read these files in this order:
-  1. CONTRIBUTING.md       — workflow rules and constraints
-  2. README.md             — architecture, schema, CLI surface, known findings
-  3. <MODULE_FILE(S)>      — the specific file(s) this issue touches
-  4. Run: python3 main.py --check   — confirm DB is healthy before starting
+  1. CONTRIBUTING.md              — rules and constraints
+  2. DOCS/ARCHITECTURE.md         — pipeline stages, modules, status flow
+  3. DOCS/DATABASE.md             — schema, field priority, status meanings
+  4. <MODULE_FILE(S)>             — the specific file(s) this issue touches
+  5. README.md                    — skip unless issue is docs-only
+  6. Run: python3 main.py --check — confirm DB is healthy before starting
 
 Do not modify music.db. Do not change the DB schema unless the issue explicitly
 requires it and you have described the migration plan first.
@@ -277,9 +286,10 @@ You are implementing a GitHub issue for the mp3-organizer-pipeline project.
 
 Before writing any code, read these files in this order:
   1. CONTRIBUTING.md
-  2. README.md
-  3. pipeline/identify.py
-  4. Run: python3 main.py --check
+  2. DOCS/ARCHITECTURE.md
+  3. DOCS/DATABASE.md
+  4. pipeline/identify.py
+  5. README.md — skip unless needed
 
 Do not modify music.db. Do not change the DB schema.
 
@@ -351,11 +361,12 @@ You are implementing a GitHub issue for the mp3-organizer-pipeline project.
 
 Before writing any code, read these files in this order:
   1. CONTRIBUTING.md
-  2. README.md — especially the schema and config sections
-  3. pipeline/config.py
-  4. pipeline/identify.py
-  5. pipeline/tagger.py
-  6. Run: python3 main.py --check
+  2. DOCS/ARCHITECTURE.md
+  3. DOCS/DATABASE.md
+  4. pipeline/config.py
+  5. pipeline/identify.py
+  6. pipeline/tagger.py
+  7. Run: python3 main.py --check
 
 Do not modify music.db. Do not change the DB schema.
 
