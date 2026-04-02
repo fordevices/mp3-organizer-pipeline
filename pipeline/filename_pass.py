@@ -236,6 +236,11 @@ def run_filename_pass() -> dict:
         query = clean_filename(song["file_path"])
         print(f"({i}/{total}) Searching: {query!r}")
 
+        if not os.path.exists(song["file_path"]):
+            print(f"{YELLOW}[{song_id}] File no longer exists — skipping{RESET}\n")
+            processed += 1
+            continue
+
         if not query:
             print(f"{YELLOW}[{song_id}] Filename too short to search — skipped{RESET}\n")
             no_mb_match += 1

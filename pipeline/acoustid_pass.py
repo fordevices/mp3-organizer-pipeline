@@ -17,6 +17,7 @@ Prerequisites:
 """
 
 import shutil
+import os
 from datetime import datetime, timezone
 
 from pipeline import config
@@ -248,6 +249,11 @@ def run_acoustid_pass() -> dict:
         song_id = song["song_id"]
         name = song["file_path"].split("/")[-1]
         print(f"({i}/{total}) Fingerprinting: {name}")
+
+        if not os.path.exists(song["file_path"]):
+            print(f"{YELLOW}[{song_id}] File no longer exists — skipping{RESET}\n")
+            processed += 1
+            continue
 
         matches = _lookup(song["file_path"])
 
