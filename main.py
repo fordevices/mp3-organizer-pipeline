@@ -32,6 +32,28 @@ def cmd_check():
 
 
 # ---------------------------------------------------------------------------
+# --zeroise
+# ---------------------------------------------------------------------------
+
+def cmd_zeroise():
+    conn = get_connection()
+    try:
+        total = conn.execute("SELECT COUNT(*) FROM songs").fetchone()[0]
+        runs  = conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
+        print(f"This will delete {total} song(s) and {runs} run(s) from the database.")
+        answer = input("Type YES to confirm: ").strip()
+        if answer != "YES":
+            print("Aborted.")
+            return
+        conn.execute("DELETE FROM songs")
+        conn.execute("DELETE FROM runs")
+        conn.commit()
+        print("Database cleared.")
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
 # --stats
 # ---------------------------------------------------------------------------
 
@@ -98,12 +120,32 @@ def main():
                         help="Verify DB tables and print row counts")
     parser.add_argument("--stats", action="store_true",
                         help="Print DB summary by status and language")
+    parser.add_argument("--zeroise", action="store_true",
+                        help="Clear all songs and runs from the database (asks for confirmation)")
+    parser.add_argument("--move", action="store_true",
+                        help="Tag and move all identified songs to Music/ (stages 3+4, no source needed)")
+    parser.add_argument("--acoustid", action="store_true",
+                        help="AcoustID fallback pass: fingerprint no_match songs and review interactively")
 
     args = parser.parse_args()
 
     # ── Standalone commands ──────────────────────────────────────────────
     if args.check:
         cmd_check()
+        return
+
+    if args.zeroise:
+        cmd_zeroise()
+        return
+
+    if args.move:
+        from pipeline.runner import run_pipeline
+        run_pipeline(source_path="(db-only)", stages=[3, 4], dry_run=args.dry_run)
+        return
+
+    if args.acoustid:
+        from pipeline.acoustid_pass import run_acoustid_pass
+        run_acoustid_pass()
         return
 
     if args.stats:
