@@ -368,6 +368,18 @@ No year  → Music/Tamil/Unknown Year/Minnale/Vaseegara.mp3
 No album → Music/Tamil/2001/Unknown Album/Vaseegara.mp3
 ```
 
+**Collection-fix songs** are files that Shazam could not identify but whose filename
+contained a `from <Album>` clue (e.g. `Vaseegara (From Minnale).mp3`). These are
+identified automatically and routed to a `Collections/` folder:
+
+```
+Music/Tamil/Collections/Minnale/Vaseegara.mp3
+Music/Hindi/Collections/Muqaddar Ka Sikandar/O Saathi Re.mp3
+```
+
+If the year is later resolved (via manual review or a future identification pass), the
+file will be re-routed to the standard year-based path.
+
 Characters illegal in filenames (`/ \ : * ? " < > |`) are replaced with `_`.
 All other characters — including Tamil script, Hindi script, parentheses, ampersands, and
 hyphens — are preserved exactly.

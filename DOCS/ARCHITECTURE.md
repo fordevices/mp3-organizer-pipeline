@@ -14,10 +14,10 @@ that are already complete.
 
 | Stage | Module | Entry function | What it does |
 |---|---|---|---|
-| 1 | `pipeline/identify.py` | `run_identification()` | Walks source path for MP3s, computes MD5 hash for dedup, calls ShazamIO to fingerprint each file, writes results to DB |
+| 1 | `pipeline/identify.py` | `run_identification()` | Walks source path for MP3s, computes MD5 hash for dedup, calls ShazamIO to fingerprint each file; falls back to collection-fix detection for no_match files |
 | 2 | `pipeline/review.py` | `run_review()` | Interactive terminal CLI for `no_match` files — play, skip, or enter metadata manually |
 | 3 | `pipeline/tagger.py` | `run_tagging()` | Reads `identified` rows from DB, writes ID3 tags into each MP3 using Mutagen, downloads cover art |
-| 4 | `pipeline/organizer.py` | `run_organization()` | Reads `tagged` rows from DB, renames and moves each file to `Music/<Language>/<Year>/<Album>/` |
+| 4 | `pipeline/organizer.py` | `run_organization()` | Reads `tagged` rows from DB, renames and moves each file to `Music/<Language>/<Year>/<Album>/` or `Music/<Language>/Collections/<Album>/` |
 
 ---
 
@@ -31,9 +31,15 @@ and write to `music.db` goes through a function in this module. No other module 
 SQL. Exports: `get_connection`, `generate_song_id`, `insert_song`, `update_song`,
 `get_songs_by_status`, `song_exists_by_hash`, `create_run`, `finish_run`, `get_run_summary`.
 
+**`pipeline/collection.py`** — Collection-fix detection. Applies regex patterns to
+filenames to extract song title and album name from conventions like `(from Minnale)` or
+`[from Kadal]`. Called by `identify.py` as a fallback when Shazam returns no match.
+Exports `extract_collection_clue(file_path)`.
+
 **`pipeline/identify.py`** — Stage 1. Owns file discovery (`walk_mp3s`), MD5 hashing
-(`compute_md5`), language detection from path (`detect_language`), ShazamIO calls, and
-the short-file guard. Must never import from `tagger.py` or `organizer.py`.
+(`compute_md5`), language detection from path (`detect_language`), ShazamIO calls, the
+short-file guard, and the collection-fix fallback. Must never import from `tagger.py` or
+`organizer.py`.
 
 **`pipeline/review.py`** — Stage 2. Owns the interactive review loop, override parsing
 (`parse_override`), and audio playback (`play_file`). Reads `no_match` rows from DB;
@@ -65,8 +71,9 @@ mp3-organizer-pipeline/
 ├── pipeline/
 │   ├── __init__.py
 │   ├── config.py          # Constants, paths, tunable settings
+│   ├── collection.py      # Collection-fix detection (filename pattern extraction)
 │   ├── db.py              # All SQLite operations (single source of truth)
-│   ├── identify.py        # Stage 1 — ShazamIO recognition
+│   ├── identify.py        # Stage 1 — ShazamIO recognition + collection-fix fallback
 │   ├── review.py          # Stage 2 — Interactive manual review CLI
 │   ├── tagger.py          # Stage 3 — Mutagen ID3 tag write
 │   ├── organizer.py       # Stage 4 — Rename + move to output folder
@@ -108,7 +115,8 @@ mp3-organizer-pipeline/
 | Transition | Triggered by |
 |---|---|
 | `pending` → `identified` | ShazamIO returns a match in Stage 1 |
-| `pending` → `no_match` | ShazamIO returns no match, or file too short (<8s) |
+| `pending` → `identified` (collection-fix) | Shazam fails but filename contains a `from <Album>` pattern |
+| `pending` → `no_match` | Shazam returns no match and no collection pattern found, or file too short (<8s) |
 | `pending` → `error` | Unhandled exception in Stage 1 |
 | `no_match` → `identified` | User enters metadata in `--review` mode (Stage 2) |
 | `identified` → `tagged` | Stage 3 writes ID3 tags successfully |
@@ -155,6 +163,18 @@ Missing fields fall back gracefully:
 - No year → `Unknown Year`
 - No album → `Unknown Album`
 - No title → `song_id` (e.g. `max-000042`)
+
+**Collection-fix songs** (identified from filename patterns, no year known) go to:
+
+```
+Music/<Language>/Collections/<Album>/<Title>.mp3
+```
+
+Example:
+```
+Music/Tamil/Collections/Minnale/Vaseegara.mp3
+Music/Hindi/Collections/Muqaddar Ka Sikandar/O Saathi Re.mp3
+```
 
 Characters illegal in filenames (`/ \ : * ? " < > |`) are replaced with `_`.
 Parentheses, brackets, ampersands, hyphens, exclamation marks, and Unicode (Tamil
@@ -206,6 +226,8 @@ runs/2026-03-21_14-32-00/
 | `python3 main.py --review --limit N` | Review only next N unmatched files |
 | `python3 main.py --stats` | Print DB summary — no files touched |
 | `python3 main.py --check` | Verify DB tables exist — nothing else |
+| `python3 main.py --move` | Tag and move all identified songs (stages 3+4, no source needed) |
+| `python3 main.py --zeroise` | Clear all songs and runs from the database (asks for confirmation) |
 
 ---
 

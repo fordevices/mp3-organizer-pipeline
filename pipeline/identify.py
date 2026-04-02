@@ -8,6 +8,7 @@ from mutagen.mp3 import MP3, HeaderNotFoundError
 from shazamio import Shazam
 
 from pipeline import config
+from pipeline.collection import extract_collection_clue
 from pipeline.db import (
     get_connection,
     insert_song,
@@ -151,7 +152,20 @@ async def identify_file(file_path: str, run_id: str, shazam: Shazam) -> dict:
                 run_id=run_id,
             )
         else:
-            update_song(song_id, status="no_match", last_attempt_at=now, run_id=run_id)
+            # Shazam failed — try extracting album clues from the filename
+            clue = extract_collection_clue(file_path)
+            if clue:
+                update_song(
+                    song_id,
+                    status="identified",
+                    final_title=clue["title"],
+                    final_album=clue["album"],
+                    id_source="collection-fix",
+                    last_attempt_at=now,
+                    run_id=run_id,
+                )
+            else:
+                update_song(song_id, status="no_match", last_attempt_at=now, run_id=run_id)
 
     except Exception as e:
         update_song(song_id, status="error", error_msg=str(e), run_id=run_id)
@@ -184,9 +198,14 @@ def run_identification(source_path: str, run_id: str) -> dict:
                 lang = song.get("language", "")
 
                 if status == "identified":
-                    title = song.get("shazam_title", "")
-                    artist = song.get("shazam_artist", "")
-                    print(f"{GREEN}[{song_id}] ✓ identified  ({i}/{total}) {lang} | {title} — {artist}{RESET}")
+                    if song.get("id_source") == "collection-fix":
+                        title = song.get("final_title", "")
+                        album = song.get("final_album", "")
+                        print(f"{GREEN}[{song_id}] ✓ collection  ({i}/{total}) {lang} | {title} (from {album}){RESET}")
+                    else:
+                        title = song.get("shazam_title", "")
+                        artist = song.get("shazam_artist", "")
+                        print(f"{GREEN}[{song_id}] ✓ identified  ({i}/{total}) {lang} | {title} — {artist}{RESET}")
                     counts["identified"] += 1
                 elif status == "no_match":
                     err = song.get("error_msg") or ""

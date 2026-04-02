@@ -38,21 +38,33 @@ def sanitize(name: str) -> str:
 def build_target_path(song: dict) -> str:
     """
     Construct the destination path for a tagged song.
-    Pattern: Music/<Language>/<Year>/<Album>/<Title>.mp3
+
+    Normal pattern:      Music/<Language>/<Year>/<Album>/<Title>.mp3
+    Collection (no year): Music/<Language>/Collections/<Album>/<Title>.mp3
+
     All components pass through sanitize(). Returns absolute path.
     """
     language = song.get("language") or "Other"
-    year     = resolve(song.get("final_year"),   song.get("shazam_year"),  "Unknown Year")
+    year     = resolve(song.get("final_year"),   song.get("shazam_year"),  "")
     album    = resolve(song.get("final_album"),   song.get("shazam_album"), "Unknown Album")
     title    = resolve(song.get("final_title"),   song.get("shazam_title"), song.get("song_id", "Unknown"))
 
-    path = os.path.join(
-        config.OUTPUT_DIR,
-        sanitize(language),
-        sanitize(year),
-        sanitize(album),
-        sanitize(title) + ".mp3",
-    )
+    if song.get("id_source") == "collection-fix" and not year:
+        path = os.path.join(
+            config.OUTPUT_DIR,
+            sanitize(language),
+            "Collections",
+            sanitize(album),
+            sanitize(title) + ".mp3",
+        )
+    else:
+        path = os.path.join(
+            config.OUTPUT_DIR,
+            sanitize(language),
+            sanitize(year or "Unknown Year"),
+            sanitize(album),
+            sanitize(title) + ".mp3",
+        )
     return os.path.abspath(path)
 
 
