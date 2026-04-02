@@ -25,6 +25,8 @@ without reprocessing files that are already done.
 | shazamio | 0.8+ | Installed via pip |
 | mutagen | any | Installed via pip |
 | requests | any | Installed via pip |
+| pyacoustid | any | Installed via pip — required for `--acoustid` pass only |
+| fpcalc | 1.4+ | System binary (Chromaprint) — required for `--acoustid` pass only |
 | Internet | required | ShazamIO sends audio fingerprints to Shazam's servers |
 | Disk space | ~50 MB | For `music.db` + run logs; `Music/` output size varies |
 
@@ -375,16 +377,23 @@ filename, you can run a second identification pass using AcoustID + MusicBrainz.
 
 ### Prerequisites
 
-1. **Install Chromaprint** (the `fpcalc` binary):
+1. **Install the Python library:**
+   ```
+   pip install pyacoustid
+   ```
+   > If you installed dependencies with `pip install -r requirements.txt` before this
+   > feature was added, re-run it to pick up `pyacoustid`.
+
+2. **Install Chromaprint** (the `fpcalc` binary used for audio fingerprinting):
    ```
    macOS:   brew install chromaprint
    Linux:   sudo apt install libchromaprint-tools
    Windows: download fpcalc from https://acoustid.org/chromaprint
    ```
 
-2. **Register for a free AcoustID API key** at https://acoustid.org (takes 2 minutes, no payment).
+3. **Register for a free AcoustID API key** at https://acoustid.org (2 minutes, no payment).
 
-3. **Set the environment variable:**
+4. **Set the environment variable** (add to `~/.bashrc` to make it permanent):
    ```
    export ACOUSTID_API_KEY=your_key_here
    ```
@@ -393,6 +402,15 @@ filename, you can run a second identification pass using AcoustID + MusicBrainz.
 
 ```
 python3 main.py --acoustid
+```
+
+This works directly on your existing `no_match` files in the database — no need to
+re-run Stage 1. If you want to test on a small set first:
+
+```
+python3 main.py --zeroise                 # wipe DB
+python3 main.py Input/Tamil/some_folder/  # re-run Stage 1 on a small folder
+python3 main.py --acoustid                # test on that small batch
 ```
 
 For each `no_match` file, the pipeline will:
@@ -416,13 +434,6 @@ Year     : 2001
 
 | Key | Action |
 |---|---|
-| `1` / `2` / `3` | Accept that candidate as-is |
-| `e` | Enter metadata manually (Title \| Artist \| Album \| Year) |
-| `p` | Play the file, then return to the prompt |
-| `s` | Skip (file stays `no_match`) |
-| `q` | Quit, resume later |
-
-After the pass, run `--move` to tag and move newly identified files:
 | `a` | Accept the proposed match as-is |
 | `e` | Edit individual fields before saving |
 | `p` | Play the file, then return to the prompt |
