@@ -9,6 +9,7 @@ No API key or binary dependency required — MusicBrainz has a free, open API.
 Sets id_source='filename-match' on acceptance.
 """
 
+import os
 import re
 import time
 from datetime import datetime, timezone
