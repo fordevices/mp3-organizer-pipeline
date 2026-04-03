@@ -325,6 +325,27 @@ Have at least the following test files available in `Input/`:
 
 ---
 
+### TC-20 — `--review --folder`: scope review to a specific folder path
+
+> **Status:** Pending implementation — tracked in issue #15.
+> Found during TC-02 system testing (2026-04-02): when correcting metadata for songs in a
+> specific output folder (e.g. `Music/Tamil/Collections/`), the user needs to filter the
+> review queue by folder rather than reviewing the entire queue.
+
+**Tests:** `--review --folder` filters queue to songs matching a path prefix
+
+1. Ensure songs exist in both `Music/Tamil/Collections/` and `Music/Tamil/<Year>/`.
+2. Run: `python3 main.py --review --all --folder=Music/Tamil/Collections/`
+3. **Expected:** Only songs whose `file_path` or `final_path` starts with
+   `Music/Tamil/Collections/` appear in the review queue.
+4. **Verify:** Songs from `Music/Tamil/<Year>/` do not appear.
+5. Run: `python3 main.py --review --all --folder=Music/Tamil/` — should include all Tamil songs.
+6. Run with a folder that matches nothing — should print a clean "no songs found" message
+   and exit without error.
+7. Verify `--folder` combines correctly with `--flagged` and `--limit N`.
+
+---
+
 ## Full regression checklist
 
 After completing all test cases above, verify:

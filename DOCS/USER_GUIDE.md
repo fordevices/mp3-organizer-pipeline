@@ -28,6 +28,7 @@ without reprocessing files that are already done.
 | `python3 main.py --move` | Tag and move all identified files | Run after any identification pass |
 | `python3 main.py --stats` | Show DB summary (counts, languages, top albums) | No files touched |
 | `python3 main.py --review --flagged` | Review only suspicious-year entries | Catches Shazam data errors (e.g. year 1905 → 1995) |
+| `python3 main.py --review --folder=PATH` | Review only songs in a specific folder | Issue #15 — coming soon |
 | `python3 main.py Input/ --dry-run` | Preview everything — nothing written or moved | Safe to run on a new batch first |
 | `python3 main.py --zeroise` | Wipe the database and start fresh | Requires typing `YES` to confirm |
 
@@ -360,9 +361,15 @@ Use the partial override `| | | 1995` to correct just the year.
 ### Other review modes
 
 ```
-python3 main.py --review --all        ← review every song, not just no_match
-python3 main.py --review --limit 20   ← review only the next 20 unmatched files
+python3 main.py --review --all              ← review every song, not just no_match
+python3 main.py --review --limit 20         ← review only the next 20 unmatched files
+python3 main.py --review --folder=Music/Tamil/Collections/  ← review songs in a specific folder (issue #15 — coming soon)
 ```
+
+The `--folder` filter scopes the review queue to songs whose stored path starts with the
+given prefix. Useful for correcting metadata on all songs that landed in `Collections/`
+or any other specific output folder. Works in combination with `--all`, `--flagged`,
+and `--limit`.
 
 ---
 
@@ -534,6 +541,7 @@ hyphens — are preserved exactly.
 | `python3 main.py --review --flagged` | Review only suspicious-year files |
 | `python3 main.py --review --all` | Review every file including matched ones |
 | `python3 main.py --review --limit N` | Review only next N unmatched files |
+| `python3 main.py --review --folder=PATH` | Review only songs whose path starts with PATH (issue #15 — coming soon) |
 | `python3 main.py --stats` | Print DB summary — no files touched |
 | `python3 main.py --check` | Verify DB tables exist — nothing else |
 | `python3 main.py --move` | Tag and move all identified songs to `Music/` (stages 3+4, no source needed) |
