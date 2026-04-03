@@ -16,6 +16,25 @@ without reprocessing files that are already done.
 
 ---
 
+## Quick command reference
+
+| Command | What it does | Notes |
+|---|---|---|
+| `python3 main.py Input/` | Full pipeline — identify, tag, and move everything | Resumes safely if interrupted |
+| `python3 main.py Input/ --stage 1` | Identify only (Shazam fingerprinting) | First step on a new batch |
+| `python3 main.py --review` | Review unmatched files interactively | After Stage 1 finds `no_match` files |
+| `python3 main.py --filename-match` | Search MusicBrainz by cleaned filename | Second pass for `no_match` files; no API key needed |
+| `python3 main.py --acoustid` | AcoustID audio fingerprint fallback | Requires `fpcalc` binary and AcoustID API key |
+| `python3 main.py --move` | Tag and move all identified files | Run after any identification pass |
+| `python3 main.py --stats` | Show DB summary (counts, languages, top albums) | No files touched |
+| `python3 main.py --review --flagged` | Review only suspicious-year entries | Catches Shazam data errors (e.g. year 1905 → 1995) |
+| `python3 main.py Input/ --dry-run` | Preview everything — nothing written or moved | Safe to run on a new batch first |
+| `python3 main.py --zeroise` | Wipe the database and start fresh | Requires typing `YES` to confirm |
+
+For all flags and combinations see [Full CLI reference](#full-cli-reference) below.
+
+---
+
 ## Requirements
 
 | Item | Minimum version | Notes |
