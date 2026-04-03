@@ -87,7 +87,7 @@ def cmd_stats():
         ).fetchone()[0]
         if no_match_count:
             print()
-            print(f"  {no_match_count} file(s) still need review — run: python main.py --review")
+            print(f"  {no_match_count} file(s) still need review — run: python3 main.py --review")
     finally:
         conn.close()
 

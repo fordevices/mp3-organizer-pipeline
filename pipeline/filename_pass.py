@@ -227,7 +227,7 @@ def run_filename_pass() -> dict:
         return {"processed": 0, "accepted": 0, "skipped": 0,
                 "no_mb_match": 0, "errors": 0}
 
-    print(f"Filename pass — {total} no_match song(s)")
+    print(f"Metadata search — {total} no_match song(s)")
     print("[1/2/3] Pick candidate  [e]dit  [p]lay  [s]kip  [q]uit\n")
 
     processed = accepted = skipped = no_mb_match = errors = 0
@@ -270,7 +270,7 @@ def run_filename_pass() -> dict:
             time.sleep(_MB_SLEEP)
 
     print(
-        f"Filename pass complete — {accepted} accepted, {skipped} skipped, "
+        f"Metadata search complete — {accepted} accepted, {skipped} skipped, "
         f"{no_mb_match} no match, {errors} errors."
     )
     return {

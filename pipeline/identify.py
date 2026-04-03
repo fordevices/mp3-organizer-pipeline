@@ -125,7 +125,8 @@ async def identify_file(file_path: str, run_id: str, shazam: Shazam) -> dict:
                     return {}
                 else:
                     # Already processed — skip
-                    increment_duplicate_count(row["song_id"])
+                    if row["status"] == "done":
+                        increment_duplicate_count(row["song_id"])
                     print(f"[SKIP]  already in DB: {file_path}")
                     return {}
             else:
