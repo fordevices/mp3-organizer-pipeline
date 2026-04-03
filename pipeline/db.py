@@ -132,6 +132,17 @@ def get_songs_by_status(status: str) -> list[dict]:
         conn.close()
 
 
+def get_all_songs() -> list[dict]:
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM songs ORDER BY song_id"
+        ).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+
 def song_exists_by_hash(file_hash: str) -> bool:
     conn = get_connection()
     try:

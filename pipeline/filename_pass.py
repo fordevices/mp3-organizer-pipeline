@@ -2,10 +2,10 @@
 Metadata search pass — issue #3 (renamed from filename pass).
 
 Third identification pass for files that Shazam and AcoustID both failed on.
-Searches MusicBrainz text search API using the best available text signals:
+Searches MusicBrainz and iTunes using the best available text signals:
 existing ID3 tags (title, artist) are preferred over the cleaned filename.
 
-No API key or binary dependency required — MusicBrainz has a free, open API.
+No API key required — MusicBrainz and iTunes Search are both free and open.
 Sets id_source='metadata-search' on acceptance.
 """
 
@@ -16,8 +16,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
+from mutagen.id3 import ID3, ID3NoHeaderError
 
-from pipeline.db import get_songs_by_status, update_song
+from pipeline.db import get_all_songs, get_songs_by_status, update_song
 from pipeline.review import parse_override, play_file
 from pipeline.runner import GREEN, YELLOW, RED, RESET
 
@@ -25,6 +26,7 @@ _DIVIDER = "─" * 44
 _MB_URL = "https://musicbrainz.org/ws/2/recording/"
 _MB_USER_AGENT = "mp3-organizer-pipeline/1.0 ( https://github.com/fordevices/mp3-organizer-pipeline )"
 _MB_SLEEP = 1.1   # MusicBrainz rate limit: 1 request/second
+_ITUNES_URL = "https://itunes.apple.com/search"
 
 
 # ---------------------------------------------------------------------------
@@ -53,6 +55,26 @@ def clean_filename(file_path: str) -> str:
     return stem.strip(' -.')
 
 
+def _get_query(song: dict, file_path: str) -> str:
+    """
+    Build the best available search query for a song.
+    Priority: existing ID3 tags (TIT2 + TPE1) > cleaned filename.
+    """
+    try:
+        tags = ID3(file_path)
+        title = str(tags.get("TIT2", "")).strip()
+        artist = str(tags.get("TPE1", "")).strip()
+        if title and artist:
+            return f"{title} {artist}"
+        if title:
+            return title
+        if artist:
+            return artist
+    except (ID3NoHeaderError, Exception):
+        pass
+    return clean_filename(file_path)
+
+
 # ---------------------------------------------------------------------------
 # MusicBrainz search
 # ---------------------------------------------------------------------------
@@ -60,7 +82,7 @@ def clean_filename(file_path: str) -> str:
 def _search_musicbrainz(query: str) -> list[dict]:
     """
     Search MusicBrainz recordings for the given query string.
-    Returns up to 3 matches as dicts: {score, title, artist, album, year}.
+    Returns up to 3 matches as dicts: {source, score, title, artist, album, year}.
     Returns [] on any error.
     """
     try:
@@ -93,7 +115,51 @@ def _search_musicbrainz(query: str) -> list[dict]:
 
         if title:
             matches.append({
+                "source": "MB",
                 "score": score,
+                "title": title,
+                "artist": artist,
+                "album": album,
+                "year": year,
+            })
+
+    return matches[:3]
+
+
+# ---------------------------------------------------------------------------
+# iTunes search
+# ---------------------------------------------------------------------------
+
+def _search_itunes(query: str) -> list[dict]:
+    """
+    Search iTunes for the given query string.
+    Returns up to 3 matches as dicts: {source, score, title, artist, album, year}.
+    Returns [] on any error.
+    """
+    try:
+        resp = requests.get(
+            _ITUNES_URL,
+            params={"term": query, "entity": "song", "limit": 5},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        print(f"  iTunes search error: {e}")
+        return []
+
+    matches = []
+    for item in data.get("results", []):
+        title = item.get("trackName", "")
+        artist = item.get("artistName", "")
+        album = item.get("collectionName", "")
+        release_date = item.get("releaseDate", "")
+        year = release_date[:4] if release_date else ""
+
+        if title:
+            matches.append({
+                "source": "iTunes",
+                "score": None,
                 "title": title,
                 "artist": artist,
                 "album": album,
@@ -112,10 +178,12 @@ def _print_candidates(song: dict, query: str, matches: list[dict]) -> None:
     print(f"Song ID  : {song['song_id']}")
     print(f"File     : {song['file_path']}")
     print(f"Language : {song.get('language', '')}")
+    print(f"Status   : {song.get('status', '')}")
     print(f"Search   : {query!r}")
-    print(f"── MusicBrainz candidates ──")
+    print(f"── Candidates ──")
     for i, m in enumerate(matches, 1):
-        print(f"  [{i}] {m['score']:>3}%  {m['title']} — {m['artist']}"
+        score_str = f"{m['score']:>3}%" if m["score"] is not None else "    "
+        print(f"  [{i}] {score_str}  [{m['source']:<6}]  {m['title']} — {m['artist']}"
               f"  |  {m['album'] or '(no album)'}  {m['year'] or ''}")
     print(_DIVIDER)
 
@@ -148,7 +216,7 @@ def _review_candidates(song: dict, query: str, matches: list[dict]) -> str:
                 final_artist=match["artist"],
                 final_album=match["album"],
                 final_year=match["year"],
-                id_source="filename-match",
+                id_source="metadata-search",
                 last_attempt_at=now,
             )
             print(f"{GREEN}✓ Accepted [{choice}]. Status → identified.{RESET}\n")
@@ -188,7 +256,7 @@ def _review_candidates(song: dict, query: str, matches: list[dict]) -> str:
                     final_artist=parsed["artist"],
                     final_album=parsed["album"],
                     final_year=parsed["year"],
-                    id_source="filename-match",
+                    id_source="metadata-search",
                     last_attempt_at=now,
                     override_used=1,
                     override_raw=raw,
@@ -212,47 +280,64 @@ def _review_candidates(song: dict, query: str, matches: list[dict]) -> str:
 # Batch runner
 # ---------------------------------------------------------------------------
 
-def run_filename_pass() -> dict:
+def run_filename_pass(folder: str = None, all_songs: bool = False) -> dict:
     """
-    Process all no_match songs by searching MusicBrainz with their cleaned
-    filename and presenting candidates for manual verification.
+    Process songs by searching MusicBrainz and iTunes with their best available
+    query (ID3 tags preferred over cleaned filename) and presenting candidates
+    for manual verification.
+
+    folder    — if set, only process songs whose file_path contains this string
+    all_songs — if True, process all songs regardless of status;
+                otherwise only no_match songs
 
     Returns {processed, accepted, skipped, no_mb_match, errors}.
     """
-    songs = get_songs_by_status("no_match")
+    if all_songs:
+        songs = get_all_songs()
+    else:
+        songs = get_songs_by_status("no_match")
+
+    if folder:
+        songs = [s for s in songs if folder in s["file_path"]]
+
     total = len(songs)
 
     if total == 0:
-        print("No no_match songs to process with filename search.")
+        print("No songs to process with metadata search.")
         return {"processed": 0, "accepted": 0, "skipped": 0,
-                "no_mb_match": 0, "errors": 0}
+                "no_match": 0, "errors": 0}
 
-    print(f"Metadata search — {total} no_match song(s)")
-    print("[1/2/3] Pick candidate  [e]dit  [p]lay  [s]kip  [q]uit\n")
+    scope = "all songs" if all_songs else "no_match songs"
+    folder_note = f" in '{folder}'" if folder else ""
+    print(f"Metadata search — {total} {scope}{folder_note}")
+    print("[1…6] Pick candidate  [e]dit  [p]lay  [s]kip  [q]uit\n")
 
-    processed = accepted = skipped = no_mb_match = errors = 0
+    processed = accepted = skipped = no_match = errors = 0
 
     for i, song in enumerate(songs, 1):
         song_id = song["song_id"]
-        query = clean_filename(song["file_path"])
-        print(f"({i}/{total}) Searching: {query!r}")
 
         if not os.path.exists(song["file_path"]):
             print(f"{YELLOW}[{song_id}] File no longer exists — skipping{RESET}\n")
             processed += 1
             continue
 
+        query = _get_query(song, song["file_path"])
+        print(f"({i}/{total}) Searching: {query!r}")
+
         if not query:
-            print(f"{YELLOW}[{song_id}] Filename too short to search — skipped{RESET}\n")
-            no_mb_match += 1
+            print(f"{YELLOW}[{song_id}] No usable query — skipped{RESET}\n")
+            no_match += 1
             processed += 1
             continue
 
-        matches = _search_musicbrainz(query)
+        mb_matches = _search_musicbrainz(query)
+        itunes_matches = _search_itunes(query)
+        matches = mb_matches + itunes_matches
 
         if not matches:
-            print(f"{YELLOW}[{song_id}] No MusicBrainz match — stays no_match{RESET}\n")
-            no_mb_match += 1
+            print(f"{YELLOW}[{song_id}] No matches found — stays {song['status']}{RESET}\n")
+            no_match += 1
             processed += 1
         else:
             result = _review_candidates(song, query, matches)
@@ -271,12 +356,12 @@ def run_filename_pass() -> dict:
 
     print(
         f"Metadata search complete — {accepted} accepted, {skipped} skipped, "
-        f"{no_mb_match} no match, {errors} errors."
+        f"{no_match} no match, {errors} errors."
     )
     return {
         "processed": processed,
         "accepted": accepted,
         "skipped": skipped,
-        "no_mb_match": no_mb_match,
+        "no_match": no_match,
         "errors": errors,
     }

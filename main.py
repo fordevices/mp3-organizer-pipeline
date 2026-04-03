@@ -126,6 +126,8 @@ def main():
                         help="Tag and move all identified songs to Music/ (stages 3+4, no source needed)")
     parser.add_argument("--metadata-search", action="store_true", dest="metadata_search",
                         help="Metadata search pass: query MusicBrainz and iTunes using ID3 tags and cleaned filename, review interactively")
+    parser.add_argument("--folder", type=str, default=None,
+                        help="Limit --metadata-search or --review to songs whose path contains this string")
     parser.add_argument("--acoustid", action="store_true",
                         help="AcoustID fallback pass: fingerprint no_match songs and review interactively")
 
@@ -147,7 +149,7 @@ def main():
 
     if args.metadata_search:
         from pipeline.filename_pass import run_filename_pass
-        run_filename_pass()
+        run_filename_pass(folder=args.folder, all_songs=args.review_all)
         return
     if args.acoustid:
         from pipeline.acoustid_pass import run_acoustid_pass
