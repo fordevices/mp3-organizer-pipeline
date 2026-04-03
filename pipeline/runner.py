@@ -105,18 +105,21 @@ def run_pipeline(
     # ── Stage 1 — Identification ──────────────────────────────────────────
     if 1 in stages:
         logger.info("── Stage 1: identification ──")
-        result = run_identification(source_path, run_id)
-        files_total        = result.get("total", 0)
-        files_identified   = result.get("identified", 0)
-        files_no_match     = result.get("no_match", 0)
-        files_already_done = result.get("skipped", 0)
-        files_error        += result.get("errors", 0)
-        shazam_calls_made  = files_identified + files_no_match
-        logger.info(
-            f"Stage 1 done: {files_identified} identified, "
-            f"{files_no_match} no_match, {files_already_done} skipped, "
-            f"{result.get('errors', 0)} errors"
-        )
+        if dry_run:
+            logger.info("[DRY RUN] Stage 1 skipped — identification writes to DB and is not preview-safe")
+        else:
+            result = run_identification(source_path, run_id)
+            files_total        = result.get("total", 0)
+            files_identified   = result.get("identified", 0)
+            files_no_match     = result.get("no_match", 0)
+            files_already_done = result.get("skipped", 0)
+            files_error        += result.get("errors", 0)
+            shazam_calls_made  = files_identified + files_no_match
+            logger.info(
+                f"Stage 1 done: {files_identified} identified, "
+                f"{files_no_match} no_match, {files_already_done} skipped, "
+                f"{result.get('errors', 0)} errors"
+            )
 
     # ── Stage 2 — Review ─────────────────────────────────────────────────
     if 2 in stages:

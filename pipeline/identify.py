@@ -104,6 +104,8 @@ async def identify_file(file_path: str, run_id: str, shazam: Shazam) -> dict:
     """
     # 1. Dedup check — same file already in DB
     file_hash = compute_md5(file_path)
+    song_id = None
+
     if song_exists_by_hash(file_hash):
         conn = get_connection()
         try:
@@ -112,23 +114,30 @@ async def identify_file(file_path: str, run_id: str, shazam: Shazam) -> dict:
                 (file_hash,)
             ).fetchone()
             if row:
-                if row["file_path"] != file_path and row["status"] != "done":
+                if row["status"] == "error":
+                    # Error files are retried — reset to pending and reuse existing song_id
+                    song_id = row["song_id"]
+                    update_song(song_id, status="pending", error_msg=None, file_path=file_path)
+                elif row["file_path"] != file_path and row["status"] != "done":
                     # File was renamed — update stored path so passes can find it
                     update_song(row["song_id"], file_path=file_path)
                     print(f"[PATH]  path updated for {row['song_id']}: {file_path}")
+                    return {}
                 else:
-                    # True duplicate of a done song
+                    # Already processed — skip
                     increment_duplicate_count(row["song_id"])
                     print(f"[SKIP]  already in DB: {file_path}")
+                    return {}
+            else:
+                return {}
         finally:
             conn.close()
-        return {}
 
-    # 2. Language
-    language = detect_language(file_path)
-
-    # 3. Insert as pending
-    song_id = insert_song(file_path, file_hash, language, run_id)
+    if song_id is None:
+        # 2. Language
+        language = detect_language(file_path)
+        # 3. Insert as pending
+        song_id = insert_song(file_path, file_hash, language, run_id)
 
     # 3b. Short-file guard — files under 8s cannot be reliably fingerprinted
     try:

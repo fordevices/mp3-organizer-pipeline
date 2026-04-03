@@ -148,6 +148,7 @@ def main():
     if args.metadata_search:
         from pipeline.filename_pass import run_filename_pass
         run_filename_pass()
+        return
     if args.acoustid:
         from pipeline.acoustid_pass import run_acoustid_pass
         run_acoustid_pass()
