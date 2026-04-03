@@ -82,6 +82,56 @@ as AcoustID's community database has fewer Indian music submissions than Shazam'
 
 ---
 
+## Metadata search pass — design rationale
+
+The `--metadata-search` pass (`pipeline/filename_pass.py`) is a text-based identification
+pass for files that Shazam and AcoustID both failed on. It is distinct from audio
+fingerprinting: rather than analysing the sound, it constructs a text query from whatever
+signals are available and searches music metadata APIs.
+
+### Signal priority
+
+Many badly-named files have perfectly good ID3 tags embedded — the filename was garbled
+by the ripper or download tool but the tags were set correctly at rip time. The pass
+reads ID3 tags from the file before falling back to the cleaned filename:
+
+1. **`TIT2` (title) + `TPE1` (artist)** — most precise; used when both are present
+2. **`TIT2` (title) alone** — used when the artist tag is missing or empty
+3. **Cleaned filename** — last resort; strips track numbers, underscores, brackets,
+   year tokens, and square-bracket content before searching
+
+### Query cascade
+
+Rather than sending one query and giving up, the pass tries progressively simpler queries
+until a result above a confidence threshold is found:
+
+```
+tags: title + artist  →  any result?  →  show candidates
+          ↓ no
+tags: title alone     →  any result?  →  show candidates
+          ↓ no
+cleaned filename      →  any result?  →  show candidates
+          ↓ no
+→ mark as no_mb_match, move on
+```
+
+### Search source comparison
+
+| Service | Auth required | Strengths for this use case |
+|---|---|---|
+| **MusicBrainz** | None | Open database; strong for Western, classical, and well-catalogued Indian film music; returns confidence scores |
+| **iTunes Search API** (Apple) | None | Apple Music catalog; excellent coverage of Tamil and Hindi film music; clean structured data; no rate limit documented |
+| **Deezer API** | None | Good mainstream coverage; decent Indian music catalog; straightforward JSON response |
+
+Both MusicBrainz and iTunes are queried with no API key or account. MusicBrainz enforces
+a strict 1 req/sec rate limit (handled by `time.sleep(1.1)` between calls). iTunes has no
+published rate limit but is used conservatively. Deezer is available as a future extension.
+
+The pass labels each candidate with which signal was used (tags vs filename) so the user
+can judge the result in context.
+
+---
+
 ## Links
 
 [README.md](../README.md) | [Architecture](ARCHITECTURE.md) | [Database Reference](DATABASE.md)

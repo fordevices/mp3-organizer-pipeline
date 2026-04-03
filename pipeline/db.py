@@ -192,9 +192,9 @@ def find_done_duplicate(title: str, artist: str, language: str) -> dict | None:
         row = conn.execute(
             """SELECT * FROM songs
                WHERE status = 'done'
-               AND LOWER(TRIM(final_title))  = LOWER(TRIM(?))
-               AND LOWER(TRIM(final_artist)) = LOWER(TRIM(?))
-               AND LOWER(language)           = LOWER(?)
+               AND LOWER(TRIM(COALESCE(NULLIF(final_title,''),  shazam_title,  ''))) = LOWER(TRIM(?))
+               AND LOWER(TRIM(COALESCE(NULLIF(final_artist,''), shazam_artist, ''))) = LOWER(TRIM(?))
+               AND LOWER(language) = LOWER(?)
                ORDER BY created_at ASC LIMIT 1""",
             (title, artist, language),
         ).fetchone()
