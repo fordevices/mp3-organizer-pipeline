@@ -1,6 +1,6 @@
 # System Testing Guide
 
-This document provides a complete end-to-end test plan for `mp3-organizer-pipeline`. Each
+This document provides a complete end-to-end test plan for Sruthi. Each
 test case maps to a specific status transition or feature area. Run through the full suite
 after any significant change or before a release.
 

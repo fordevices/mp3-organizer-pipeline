@@ -24,7 +24,7 @@ from pipeline.runner import GREEN, YELLOW, RED, RESET
 
 _DIVIDER = "─" * 44
 _MB_URL = "https://musicbrainz.org/ws/2/recording/"
-_MB_USER_AGENT = "mp3-organizer-pipeline/1.0 ( https://github.com/fordevices/mp3-organizer-pipeline )"
+_MB_USER_AGENT = "sruthi/1.0 ( https://github.com/fordevices/sruthi )"
 _MB_SLEEP = 1.1   # MusicBrainz rate limit: 1 request/second
 _ITUNES_URL = "https://itunes.apple.com/search"
 

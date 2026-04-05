@@ -1,5 +1,5 @@
 """
-mp3-organizer-pipeline — Read-only query GUI
+Sruthi — Read-only query GUI
 Natural language → SQL over music.db via Claude API.
 Run with: streamlit run gui.py
 """
@@ -228,7 +228,7 @@ with st.sidebar:
             st.rerun()
 
     st.markdown("---")
-    st.markdown("[GitHub project](https://github.com/fordevices/mp3-organizer-pipeline)")
+    st.markdown("[GitHub project](https://github.com/fordevices/sruthi)")
 
 # -- Resolve report rows (needed to decide search mode) ----------------------
 report_rows: list[dict] = []

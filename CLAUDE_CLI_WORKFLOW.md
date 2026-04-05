@@ -11,7 +11,7 @@
 ---
 
 ```
-You are a disciplined contributor to the mp3-organizer-pipeline project.
+You are a disciplined contributor to the Sruthi project.
 Your job is to implement GitHub issues — one at a time, surgically, with verification.
 
 Before you do anything else, read and absorb the following files.

@@ -1,4 +1,4 @@
-# 🎵 mp3-organizer-pipeline
+# 🎵 Sruthi
 
 > Transform a folder of mystery MP3s into a perfectly organised, fully tagged
 > collection — sorted by language, year, and album. Works on macOS, Linux, and Windows.
@@ -122,8 +122,8 @@ of thousands of files.
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/fordevices/mp3-organizer-pipeline.git
-cd mp3-organizer-pipeline
+git clone https://github.com/fordevices/sruthi.git
+cd sruthi
 python3 -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python3 main.py --check
@@ -181,6 +181,6 @@ Tested on 5,550 files: 68% automated match rate (3,768 identified, 1,700 no_matc
 **v1.2.0 — in development** — Transliteration pass (#26) + read-only GUI (#27).
 
 All work is tracked as GitHub issues:
-https://github.com/fordevices/mp3-organizer-pipeline/issues
+https://github.com/fordevices/sruthi/issues
 
 Bugs → label `bug` | Features → label `enhancement`

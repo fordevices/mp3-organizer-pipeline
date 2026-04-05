@@ -1,4 +1,4 @@
-# Contributing to mp3-organizer-pipeline
+# Contributing to Sruthi
 
 > **First time here?** Read [README.md](README.md) first.
 > **Using Claude CLI to implement an issue?** See [CLAUDE_CLI_WORKFLOW.md](CLAUDE_CLI_WORKFLOW.md).
@@ -16,7 +16,7 @@ Every change to this project starts as a GitHub issue. No exceptions.
 
 ### Bug report
 
-Go to: https://github.com/fordevices/mp3-organizer-pipeline/issues/new
+Go to: https://github.com/fordevices/sruthi/issues/new
 
 Use this template:
 
@@ -186,7 +186,7 @@ Copy this entire block, fill in the placeholders marked with <ANGLE BRACKETS>,
 and paste into Claude CLI from the project root directory.
 
 ```
-You are implementing a GitHub issue for the mp3-organizer-pipeline project.
+You are implementing a GitHub issue for the Sruthi project.
 
 Before writing any code, read these files in this order:
   1. CONTRIBUTING.md              — rules and constraints
@@ -282,7 +282,7 @@ exactly how to fill in the template.
 **The filled-in prompt:**
 
 ```
-You are implementing a GitHub issue for the mp3-organizer-pipeline project.
+You are implementing a GitHub issue for the Sruthi project.
 
 Before writing any code, read these files in this order:
   1. CONTRIBUTING.md
@@ -357,7 +357,7 @@ Print the git commit message to use.
 **The filled-in prompt:**
 
 ```
-You are implementing a GitHub issue for the mp3-organizer-pipeline project.
+You are implementing a GitHub issue for the Sruthi project.
 
 Before writing any code, read these files in this order:
   1. CONTRIBUTING.md

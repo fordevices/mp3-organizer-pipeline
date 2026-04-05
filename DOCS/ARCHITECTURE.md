@@ -2,7 +2,7 @@
 
 ## Overview
 
-`mp3-organizer-pipeline` is a Python CLI that transforms a folder of unknown or badly-named
+Sruthi is a Python CLI that transforms a folder of unknown or badly-named
 MP3 files into a clean, fully-tagged, organised music library. The pipeline has four core
 stages plus three optional identification passes. All state lives in a local SQLite database
 (`music.db`), making the pipeline fully resume-safe — you can stop at any point and re-run
@@ -97,7 +97,7 @@ or the individual pass entry functions.
 ## File structure
 
 ```
-mp3-organizer-pipeline/
+sruthi/
 ├── pipeline/
 │   ├── __init__.py
 │   ├── config.py           # Constants, paths, environment variables

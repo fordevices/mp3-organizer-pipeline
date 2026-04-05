@@ -1,10 +1,10 @@
-# mp3-organizer-pipeline — User Guide
+# Sruthi — User Guide
 
 > **New to this project?** Start with [What it does](../README.md).
 > **Want to understand how it works?** See [Architecture](ARCHITECTURE.md).
 > **Questions about MP3s and fingerprinting?** See [Music Files Primer](MUSIC_FILES_PRIMER.md).
 
-`mp3-organizer-pipeline` is a command-line tool that takes a folder of unknown, badly-named
+Sruthi is a command-line tool that takes a folder of unknown, badly-named
 MP3 files and transforms them into a clean, fully tagged, and neatly organised music library.
 It is designed for anyone with a large collection of Tamil, Hindi, English, or other-language
 MP3s whose filenames are garbled, missing, or meaningless. The tool uses ShazamIO to
@@ -78,8 +78,8 @@ For all flags and combinations see [Full CLI reference](#full-cli-reference) bel
 
 2. **Clone the repo:**
    ```
-   git clone https://github.com/fordevices/mp3-organizer-pipeline.git
-   cd mp3-organizer-pipeline
+   git clone https://github.com/fordevices/sruthi.git
+   cd sruthi
    ```
 
 3. **Create a virtual environment** (recommended — keeps dependencies isolated):
@@ -115,8 +115,8 @@ For all flags and combinations see [Full CLI reference](#full-cli-reference) bel
 
 2. **Clone the repo:**
    ```
-   git clone https://github.com/fordevices/mp3-organizer-pipeline.git
-   cd mp3-organizer-pipeline
+   git clone https://github.com/fordevices/sruthi.git
+   cd sruthi
    ```
 
 3. **Create a virtual environment:**
@@ -149,8 +149,8 @@ For all flags and combinations see [Full CLI reference](#full-cli-reference) bel
 
 2. **Open Command Prompt or PowerShell, then clone the repo:**
    ```
-   git clone https://github.com/fordevices/mp3-organizer-pipeline.git
-   cd mp3-organizer-pipeline
+   git clone https://github.com/fordevices/sruthi.git
+   cd sruthi
    ```
 
 3. **Create a virtual environment:**
@@ -713,7 +713,7 @@ This tool is at v1.0.0. The pipeline is complete and working.
 
 **Found a bug?** Open an issue at:
 ```
-https://github.com/fordevices/mp3-organizer-pipeline/issues
+https://github.com/fordevices/sruthi/issues
 ```
 Label it `bug`. Include: OS, Python version, the command you ran, and the relevant lines
 from `runs/<timestamp>/run.log`.
