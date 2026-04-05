@@ -130,6 +130,8 @@ def main():
                         help="Limit --metadata-search or --review to songs whose path contains this string")
     parser.add_argument("--acoustid", action="store_true",
                         help="AcoustID fallback pass: fingerprint no_match songs and review interactively")
+    parser.add_argument("--transliterate", action="store_true",
+                        help="Transliterate Artist ID3 tags to native script for Tamil/Hindi songs (requires SARVAM_API_KEY)")
 
     args = parser.parse_args()
 
@@ -154,6 +156,11 @@ def main():
     if args.acoustid:
         from pipeline.acoustid_pass import run_acoustid_pass
         run_acoustid_pass()
+        return
+
+    if args.transliterate:
+        from pipeline.transliterate import run_transliterate_pass
+        run_transliterate_pass(dry_run=args.dry_run)
         return
 
     if args.stats:

@@ -45,6 +45,14 @@ def get_connection() -> sqlite3.Connection:
             last_attempt_at TEXT
         );
 
+        CREATE TABLE IF NOT EXISTS artist_transliterations (
+            roman_name   TEXT NOT NULL,
+            language     TEXT NOT NULL,
+            native_name  TEXT NOT NULL,
+            created_at   TEXT NOT NULL,
+            PRIMARY KEY (roman_name, language)
+        );
+
         CREATE TABLE IF NOT EXISTS runs (
             run_id        TEXT PRIMARY KEY,
             started_at    TEXT,
@@ -224,6 +232,34 @@ def increment_duplicate_count(song_id: str) -> None:
                    updated_at = ?
                WHERE song_id = ?""",
             (_now(), song_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_transliteration(roman_name: str, language: str) -> str | None:
+    """Return cached native-script name, or None if not yet transliterated."""
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT native_name FROM artist_transliterations WHERE roman_name = ? AND language = ?",
+            (roman_name, language),
+        ).fetchone()
+        return row[0] if row else None
+    finally:
+        conn.close()
+
+
+def set_transliteration(roman_name: str, language: str, native_name: str) -> None:
+    """Insert or replace a transliteration cache entry."""
+    conn = get_connection()
+    try:
+        conn.execute(
+            """INSERT OR REPLACE INTO artist_transliterations
+               (roman_name, language, native_name, created_at)
+               VALUES (?, ?, ?, ?)""",
+            (roman_name, language, native_name, _now()),
         )
         conn.commit()
     finally:

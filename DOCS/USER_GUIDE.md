@@ -31,7 +31,8 @@ without reprocessing files that are already done.
 | `python3 main.py --review --folder=PATH` | Review only songs in a specific folder | Issue #15 — coming soon |
 | `python3 main.py Input/ --dry-run` | Preview everything — nothing written or moved | Safe to run on a new batch first |
 | `python3 main.py --zeroise` | Wipe the database and start fresh | Requires typing `YES` to confirm |
-| `python3 main.py --transliterate` | Transliterate artist ID3 tags to native script | Requires `SARVAM_API_KEY` — v1.2.0 |
+| `python3 main.py --transliterate` | Transliterate artist ID3 tags to native script for Tamil/Hindi songs | Requires `SARVAM_API_KEY` |
+| `python3 main.py --transliterate --dry-run` | Preview transliterations without writing any tags | Safe first-run check |
 | `python3 gui.py` | Launch read-only NL query GUI in browser | Requires `ANTHROPIC_API_KEY` + streamlit — v1.2.0 |
 
 For all flags and combinations see [Full CLI reference](#full-cli-reference) below.
