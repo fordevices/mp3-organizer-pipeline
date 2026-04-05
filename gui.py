@@ -209,19 +209,57 @@ def show_results(rows: list[dict], sql: str):
 # UI
 # ---------------------------------------------------------------------------
 
-st.title("🎵 Sruthi")
-st.caption("Your music library, searchable in plain English.")
+# -- Sidebar -----------------------------------------------------------------
+with st.sidebar:
+    st.markdown("## 🎵 Sruthi")
+    st.markdown("### ஸ்ருதி")
+    st.caption("Your music library, searchable in plain English.")
+    st.markdown("---")
 
-st.markdown("---")
+    st.markdown("**Standard reports**")
+    report_choice = st.selectbox("report", list(CANNED.keys()), label_visibility="collapsed")
 
-# -- NL query (top) ----------------------------------------------------------
-st.subheader("Ask a question")
-st.caption("Examples: *show me all Tamil songs from 1981* · *find everything by Ilaiyaraaja* · *how many Hindi songs do I have*")
+    st.markdown("---")
+    st.markdown("[GitHub project](https://github.com/fordevices/mp3-organizer-pipeline)")
 
-question = st.text_input("Your question", placeholder="show me all Tamil songs from 1981")
-if st.button("Search", type="primary") and question.strip():
+# -- Resolve report rows (needed to decide search mode) ----------------------
+report_rows: list[dict] = []
+report_sql = ""
+report_err = None
+report_active = bool(report_choice and CANNED.get(report_choice))
+
+if report_active:
+    report_sql = CANNED[report_choice]
+    report_rows, report_err = run_sql(report_sql)
+
+# -- Search bar (single row) -------------------------------------------------
+report_mode = report_active and not report_err and report_rows
+placeholder = "Filter results..." if report_mode else "show me all Tamil songs from 1981"
+
+with st.form(key="search_form", clear_on_submit=False):
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        query = st.text_input("search", placeholder=placeholder, label_visibility="collapsed")
+    with col2:
+        submitted = st.form_submit_button("Search", type="primary", use_container_width=True)
+
+# -- Main area ---------------------------------------------------------------
+if report_active:
+    st.subheader(report_choice)
+    if report_err:
+        st.error(f"Query error: {report_err}")
+    else:
+        rows = report_rows
+        # Filter within report if query entered
+        if submitted and query.strip():
+            needle = query.strip().lower()
+            rows = [r for r in rows if any(needle in str(v).lower() for v in r.values())]
+            st.caption(f'{len(rows)} of {len(report_rows)} row(s) matching "{query}"')
+        show_results(rows, report_sql)
+
+elif submitted and query.strip():
     with st.spinner("Thinking..."):
-        sql, err = nl_to_sql(question.strip())
+        sql, err = nl_to_sql(query.strip())
     if err:
         st.error(err)
     elif sql:
@@ -232,46 +270,29 @@ if st.button("Search", type="primary") and question.strip():
         else:
             show_results(rows, sql)
 
-st.markdown("---")
-
-# -- Canned reports (main area results) --------------------------------------
-main_area = st.container()
-
-# -- Sidebar -----------------------------------------------------------------
-with st.sidebar:
-    st.header("📋 Standard reports")
-    report_choice = st.selectbox("Choose a report", list(CANNED.keys()), label_visibility="collapsed")
-
-if report_choice and CANNED[report_choice]:
-    sql = CANNED[report_choice]
-    rows, err = run_sql(sql)
-    with main_area:
-        st.subheader(report_choice)
-        if err:
-            st.error(f"Query error: {err}")
-        else:
-            show_results(rows, sql)
-
 # -- About (bottom) ----------------------------------------------------------
 st.markdown("---")
-with st.expander("ℹ️  Who this is for", expanded=False):
+with st.expander("ℹ️  About Sruthi", expanded=False):
     st.markdown("""
-**Not for everyone — and that's intentional.**
+**Sruthi** was built for a specific problem: a large collection of Tamil, Hindi, and English
+MP3s from the pre-streaming era — ripped from CDs, filed in folders named by guesswork,
+with garbled filenames and wrong or missing ID3 tags. Standard tools (beets, MusicBrainz
+Picard, AcoustID) have poor coverage of Indian film music pre-2000, especially Tamil.
 
-If you want your music organised without any of this, just use iTunes. It does the job
-beautifully for most people and you will never need this tool.
+The pipeline behind this page uses ShazamIO to identify songs by audio fingerprint.
+Shazam's database has excellent Indian music coverage because millions of Indian users have
+been Shazaming those songs for years. After a 5,550-file batch run the library went from
+a pile of mystery files to a clean, tagged, organised collection — 68% matched automatically,
+the rest reviewed by hand.
 
-This pipeline exists for a specific problem: large collections of Tamil and Hindi MP3s
-from the pre-streaming era with garbled filenames, wrong tags, and no consistent structure.
-
-The query tool above works like a report menu. Standard reports are always available in
-the sidebar. If none of them fit, describe what you want in plain English — *"show me all
-Tamil songs where the album is unknown"* — and it generates the report on the fly.
-
-**You do not need to know SQL.** In the AI age, you describe the report you need and it
-gets built for you instantly. That is the only shift from the old Crystal Reports / Power BI
-way of working.
+Sruthi is the read-only inspection layer on top of that pipeline. It exists so you can ask
+questions about your library in plain English instead of writing SQL — and because in the AI
+age, you should be able to describe the report you need rather than define it in a query
+language. Standard reports are always available in the sidebar. If none fit, just ask.
 
 This tool is **read-only** — it never writes to the database or touches your files.
 To fix issues, use the CLI commands shown in the fix hints below each flagged result.
+
+Named after *sruthi* (ஸ்ருதி) — the foundational note in Indian classical music,
+the reference pitch everything else is tuned to.
 """)
